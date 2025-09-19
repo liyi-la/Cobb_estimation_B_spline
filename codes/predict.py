@@ -119,7 +119,7 @@ class CobbNetPredictor:
 def main():
     """主函数示例"""
     # 配置
-    model_path = 'checkpoints_cobb/best_model.pth'  # 模型路径
+    model_path = 'checkpoints_cobb2/best_model.pth'  # 模型路径
     
     # 数据集路径
     path_heatmap = r'D:\Project\Xiehe_Spinal_image_stitching\cobb\Heatmap'
@@ -143,23 +143,14 @@ def main():
         result= predictor.predict_single(kp_pred_tensor)
         deta_kp = result['kp_deta']
         kp_pred_tensor = kp_pred_tensor.reshape(1, -1)
-        # print(f"  关键点坐标：{kp_pred_tensor}")
-        # print(f"  关键点变化坐标：{deta_kp}")
-        # kp = deta_kp + kp_pred_tensor
-        # kp = kp.squeeze(0).view(34, 2)
-        # print(f"  最终关键点坐标：{kp}")
-        # bs_torch = BS_curve_torch(9,3,predictor.device)
-        # paras = bs_torch.estimate_parameters(kp)
-        # knots = bs_torch.get_knots()
-        # cp = bs_torch.approximation(kp)
-        # uq = torch.linspace(0,1,34).to(predictor.device)
-        # y_c_torch = bs_torch.bs(uq)
+
         
         print(image_name)
         print(f"预测结果:")
         # print(f"  曲线：{y_c_torch}")
         print(f"  关键点坐标：{result['kp_deta'].shape}")
-        print(f"  Cobb角: {result['cobb_angles']}")
+        print(f"  原Cobb角：{cobb_angle}")
+        print(f"  修正后的Cobb角: {result['cobb_angles']}")
         print(f"  Cobb角GT: {cobb_angle_GT}")
         print("-" * 50)
         

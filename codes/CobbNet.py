@@ -88,7 +88,7 @@ class KeypointBSplineNet(nn.Module):
             cobb_angles: 计算的Cobb角 [B, num_angles]
         """
         batch_size = keypoints.shape[0]
-        print("keypoints", keypoints[0])
+
         # 确保输入是2D的
         if keypoints.dim() == 3:
             keypoints = keypoints.view(batch_size, -1)  # [B, num_keypoints*2]
@@ -116,17 +116,7 @@ class KeypointBSplineNet(nn.Module):
             uq = torch.linspace(0,1,34).to(self.device)
             y_c_torch = bs_torch.bs(uq)
             cobb_angle_torch = cobb_angle_line_torch(y_c_torch)
-            
-            kp_pred = keypoints[i].view(self.num_keypoints, 2)
-            print("kp_pred", kp_pred)
-            paras_pred = bs_torch.estimate_parameters(kp_pred)
-            knots_pred = bs_torch.get_knots()
-            cp_pred = bs_torch.approximation(kp_pred)
-            uq_pred = torch.linspace(0,1,34).to(self.device)
-            y_c_pred = bs_torch.bs(uq_pred)
-            cobb_angle_pred = cobb_angle_line_torch(y_c_pred)
-            print("cobb_angle_pred", cobb_angle_pred)
-            print("cobb_angle_torch", cobb_angle_torch)
+
             
             cobb_angles.append(cobb_angle_torch)
         cobb_angles = torch.stack(cobb_angles).squeeze(-1).to(self.device) # [bs, 3]

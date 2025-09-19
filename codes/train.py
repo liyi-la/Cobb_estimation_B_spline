@@ -54,22 +54,7 @@ model = KeypointBSplineNet(
     device=config['device']
 ).to(config['device'])
 
-# 初始化所有权重为0
-# def init_weights_zero(m):
-#     """初始化所有权重为0"""
-#     if isinstance(m, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
-#         nn.init.zeros_(m.weight)
-#         if m.bias is not None:
-#             nn.init.zeros_(m.bias)
-#     elif isinstance(m, (nn.BatchNorm2d, nn.LayerNorm)):
-#         if m.weight is not None:
-#             nn.init.zeros_(m.weight)
-#         if m.bias is not None:
-#             nn.init.zeros_(m.bias)
 
-# # 应用权重初始化
-# model.apply(init_weights_zero)
-# print("模型权重已初始化为0")
 
 # 损失函数和优化器
 criterion = KeypointBSplineLoss(cp_weight=1.0, knots_weight=10.0)
@@ -110,7 +95,6 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         cobb_angles_pred, deta_keyp = model(kp_pred)
         loss_batch = mse_loss(cobb_angles_pred, cobb_angle_GT)
 
-        print("cobb_angle_GT", cobb_angle_GT)
         # print("deta_keyp", deta_keyp)
         
         # 反向传播
