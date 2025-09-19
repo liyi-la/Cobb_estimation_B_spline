@@ -1,0 +1,34 @@
+## 模型文件
+checkpoints_cobb/
+checkpoints_cobb2/
+logs_cobb/
+logs_cobb2/
+*.pth
+codes/pretrained/
+## dataset
+*.png
+*.jpg
+*.csv
+*.txt
+Full_length_img/
+Heatmap/
+labeled_spine/
+jsons/
+
+# zip
+*.zip
+*.rar
+
+#标注
+Innovation/
+ke30_u7_AASCE2019-master/
+*.ppt
+
+## 其他
+
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+
