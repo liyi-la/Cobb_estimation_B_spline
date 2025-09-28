@@ -117,7 +117,7 @@ class CobbNetDataset(Dataset):
         # heatmap = torch.tensor(heatmap, dtype=torch.float32)
 
         
-        return origin_image.shape,label,image_name,kp_pred,cp,knots,paras,cp_GT,knots_GT,paras_GT,cobb_angle,cobb_angle_GT
+        return origin_image.shape,label,image_name,p,kp_pred,cp,knots,paras,cp_GT,knots_GT,paras_GT,cobb_angle,cobb_angle_GT
 
     def __len__(self):
         return len(self.names)

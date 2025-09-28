@@ -9,14 +9,10 @@ class BS_curve(object):
     def __init__(self,n,p,cp=None,knots=None):
         self.n = n # n+1 control points >>> p0,p1,,,pn
         self.p = p
-        if  cp is not None and knots is not None:
-            self.cp = cp
-            self.u = knots
-            self.m = knots.shape[0]-1 # m+1 knots >>> u0,u1,,,nm
-        else:
-            self.cp = None
-            self.u = None
-            self.m = None
+
+        self.cp = None
+        self.u = None
+        self.m = n + p + 1
 
         self.paras = None
 

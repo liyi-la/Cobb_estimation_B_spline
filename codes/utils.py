@@ -381,3 +381,20 @@ def cobb_angle_line_torch(y_c: torch.Tensor,
     cobb_angles = torch.stack([total_angle, upper_angle, lower_angle])
     
     return cobb_angles
+
+## 计算SMAPE
+def compute_smape(errors_dict):
+    smape_per_angle = {}
+    for angle_name, values in errors_dict.items():
+        total_err = sum(v[0] for v in values)
+        total_sum = sum(v[1] for v in values)
+        smape = (total_err / total_sum) * 100
+        smape_per_angle[angle_name] = smape
+    return smape_per_angle
+
+## 计算总体SMAPE
+def compute_overall_smape(errors_dict):
+    total_err = sum(v[0] for values in errors_dict.values() for v in values)
+    total_sum = sum(v[1] for values in errors_dict.values() for v in values)
+    return (total_err / total_sum) * 100
+

@@ -60,7 +60,7 @@ class KeypointBSplineNet(nn.Module):
             nn.Linear(256, 128),
             nn.ReLU(inplace=False),
             nn.Linear(128, knots_output_dim),
-            nn.Sigmoid()  # 确保节点值在[0,1]范围内
+            nn.Hardtanh(min_val=0.0, max_val=1.0)   # 把输出直接钳位到 [0,1] 
         )
         # Cobb角预测头
         self.cobb_angle_head = nn.Sequential(
@@ -76,8 +76,12 @@ class KeypointBSplineNet(nn.Module):
             # 把最后一层线性层的权重和偏置置 0
             self.deta_kp[-1].weight.zero_()
             self.deta_kp[-1].bias.zero_()
+            self.cp_head[-1].weight.zero_()
+            self.cp_head[-1].bias.zero_()
+            self.knots_head[-2].weight.zero_()
+            self.knots_head[-2].bias.zero_()
             
-    def forward(self, keypoints):
+    def forward(self, keypoints, knots, cp):
         """
         前向传播
         Args:
@@ -94,35 +98,52 @@ class KeypointBSplineNet(nn.Module):
             keypoints = keypoints.view(batch_size, -1)  # [B, num_keypoints*2]
         
         features = self.feature_extractor(keypoints)  # [B, 256]
-        deta_keyp = self.deta_kp(features) # [B, num_keypoints * 2]
-        kps = deta_keyp + keypoints  
-    #    # 预测控制点
-    #     cp_flat = self.cp_head(features)  # [B, num_control_points*2]
-    #     deta_cp = cp_flat.view(batch_size, self.num_control_points, 2)  # [B, num_control_points, 2]
-    #     # 预测节点
-    #     knots = self.knots_head(features)  # [B, num_control_points + degree + 1]
-    #     zeros = torch.zeros(4).to(self.device)
-    #     deta_knots = torch.cat([zeros, knots[0], zeros], dim=0).unsqueeze(0)
+        # deta_keyp = self.deta_kp(features) # [B, num_keypoints * 2]
+        # kps = deta_keyp + keypoints  
+       # 预测控制点
+        cp_flat = self.cp_head(features)  # [B, num_control_points*2]
+        deta_cp = cp_flat.view(batch_size, self.num_control_points, 2)  # [B, num_control_points, 2]
+        cps = deta_cp + cp.to(self.device)  # [B, num_control_points, 2]
+        cps = cps.to(dtype=torch.float32)
+        # 预测节点
+        deta_knots_6 = self.knots_head(features)  # [B, num_control_points + degree + 1]
+        zeros = torch.zeros(batch_size, 4).to(self.device)
+        deta_knots_14 = torch.cat([zeros, deta_knots_6, zeros], dim=1)
+        knots = deta_knots_14 + knots.to(self.device)  # [B, num_control_points + degree + 1]
+        knots = knots.to(dtype=torch.float32)
+   
         # 特征提取
         
         # 计算cobb角
         bs_torch = BS_curve_torch(9,3,self.device)
         cobb_angles = []
         for i in range(batch_size):
-            kp = kps[i].view(self.num_keypoints, 2)  # [num_keypoints, 2]
-            paras = bs_torch.estimate_parameters(kp)
-            knots = bs_torch.get_knots()
-            cp = bs_torch.approximation(kp)
+            kp = keypoints[i].view(self.num_keypoints, 2)  # [num_keypoints, 2]
+            paras = bs_torch.estimate_parameters(kp)  # 
+            cp_i = cps[i].view(self.num_control_points, 2)  # [num_control_points, 2]
+            knot_i = knots[i]  # [num_control_points + degree + 1]
+            bs_torch.cp = cp_i
+            bs_torch.u = knot_i
             uq = torch.linspace(0,1,34).to(self.device)
             y_c_torch = bs_torch.bs(uq)
             cobb_angle_torch = cobb_angle_line_torch(y_c_torch)
+            cobb_angles.append(cobb_angle_torch)
+            
+        #     
+            
+        #     knots = bs_torch.get_knots()
+        #     cp = bs_torch.approximation(kp)
+        #     uq = torch.linspace(0,1,34).to(self.device)
+        #     y_c_torch = bs_torch.bs(uq)
+        #     cobb_angle_torch = cobb_angle_line_torch(y_c_torch)
 
             
-            cobb_angles.append(cobb_angle_torch)
+        #     cobb_angles.append(cobb_angle_torch)
         cobb_angles = torch.stack(cobb_angles).squeeze(-1).to(self.device) # [bs, 3]
+  
 
         # cobb_angles = self.cobb_angle_head(features)  # [B, num_angles]
-        return cobb_angles, deta_keyp
+        return cobb_angles,deta_cp,deta_knots_6
     
 
     

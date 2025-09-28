@@ -21,14 +21,14 @@ config = {
     'path_image': r'D:\Project\Xiehe_Spinal_image_stitching\cobb\ke30_u7_AASCE2019-master\boostnet_labeldata',
     'batch_size': 16,
     'num_epochs': 100,
-    'learning_rate': 0.0005,
+    'learning_rate': 0.00005,
     'weight_decay': 1e-4,
     'num_keypoints': 34,
     'num_control_points': 10,
     'degree': 3,
     'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-    'save_dir': 'checkpoints_cobb2',
-    'log_dir': 'logs_cobb2'
+    'save_dir': 'checkpoints_cobb4',
+    'log_dir': 'logs_cobb4'
 }
 
 # 创建保存目录
@@ -38,7 +38,7 @@ os.makedirs(config['log_dir'], exist_ok=True)
 # 数据集和数据加载器
 print("加载数据集...")
 train_dataset = CobbNetDataset(config['path_image'], config['path_heatmap'], train=True)
-train_loader = DataLoader(train_dataset, config['batch_size'], shuffle=False, num_workers=0)
+train_loader = DataLoader(train_dataset, config['batch_size'], shuffle=True, num_workers=0)
 
 test_dataset = CobbNetDataset(config['path_image'], config['path_heatmap'], train=False)
 test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
@@ -81,7 +81,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
     total_knots_loss = 0.0
     num_batches = 0
     
-    for batch_idx, (origin_shape, label,  image_name, 
+    for batch_idx, (origin_shape, label,  image_name, p,
                    kp_pred, cp, knots, paras, cp_GT, knots_GT, paras_GT, 
                    cobb_angle, cobb_angle_GT) in enumerate(train_loader):
         
@@ -91,8 +91,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         # 前向传播
         # with torch.autograd.set_detect_anomaly(True):
         optimizer.zero_grad()
-        
-        cobb_angles_pred, deta_keyp = model(kp_pred)
+        cobb_angles_pred, deta_cp, deta_knots = model(kp_pred,knots,cp)
         loss_batch = mse_loss(cobb_angles_pred, cobb_angle_GT)
 
         # print("deta_keyp", deta_keyp)
@@ -101,16 +100,19 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         loss_batch.backward()
         
         # 梯度裁剪
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
         optimizer.step()
-        
+ 
+
         # 记录损失
         total_loss += loss_batch.item()
         # total_cp_loss += loss_dict['cp_loss']
         # total_knots_loss += loss_dict['knots_loss']
         num_batches += 1
-        
+
+
+  
         # 打印进度
         if batch_idx % 10 == 0:
             print(f'Epoch {epoch}, Batch {batch_idx}/{len(train_loader)}, '
@@ -128,7 +130,7 @@ def validate_epoch(model, test_loader, criterion, device):
     num_batches = 0
     
     with torch.no_grad():
-        for origin_shape, label, image_name, \
+        for origin_shape, label, image_name, p, \
             kp_pred, cp, knots, paras, cp_GT, knots_GT, paras_GT, \
             cobb_angle, cobb_angle_GT in test_loader:
             
@@ -136,7 +138,7 @@ def validate_epoch(model, test_loader, criterion, device):
             cobb_angle_GT = cobb_angle_GT.to(device, dtype=torch.float32) 
             
             # 前向传播
-            cobb_angles_pred, deta_keyp = model(kp_pred)
+            cobb_angles_pred, deta_cp, deta_knots = model(kp_pred,knots,cp)
             
             # 计算损失
             mse_loss = nn.MSELoss()
