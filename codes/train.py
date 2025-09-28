@@ -258,10 +258,10 @@ for epoch in range(config['num_epochs']):
                        os.path.join(config['save_dir'], 'best_model.pth'))
         print(f'新的最佳模型已保存，验证损失: {val_loss:.6f}')
     
-    # 定期保存检查点
-    if (epoch + 1) % 10 == 0:
-        save_checkpoint(model, optimizer, epoch, val_loss,
-                       os.path.join(config['save_dir'], f'checkpoint_epoch_{epoch}.pth'))
+    # # 定期保存检查点
+    # if (epoch + 1) % 10 == 0:
+    #     save_checkpoint(model, optimizer, epoch, val_loss,
+    #                    os.path.join(config['save_dir'], f'checkpoint_epoch_{epoch}.pth'))
     
     # 定期绘制训练历史
     if (epoch + 1) % 5 == 0:

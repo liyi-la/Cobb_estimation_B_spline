@@ -1,13 +1,10 @@
 ## 模型文件
 checkpoints_cobb/
 checkpoints_cobb2/
-logs_cobb/
-logs_cobb2/
 *.pth
 codes/pretrained/
 ## dataset
-*.png
-*.jpg
+ke30_u7_AASCE2019-master/
 *.csv
 *.txt
 Full_length_img/
@@ -21,7 +18,6 @@ jsons/
 
 #标注
 Innovation/
-ke30_u7_AASCE2019-master/
 *.ppt
 
 ## 其他
