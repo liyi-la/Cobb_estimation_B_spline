@@ -106,10 +106,10 @@ class KeypointBSplineNet(nn.Module):
         cps = deta_cp + cp.to(self.device)  # [B, num_control_points, 2]
         cps = cps.to(dtype=torch.float32)
         # 预测节点
-        deta_knots_6 = self.knots_head(features)  # [B, num_control_points + degree + 1]
-        zeros = torch.zeros(batch_size, 4).to(self.device)
-        deta_knots_14 = torch.cat([zeros, deta_knots_6, zeros], dim=1)
-        knots = deta_knots_14 + knots.to(self.device)  # [B, num_control_points + degree + 1]
+        # deta_knots_6 = self.knots_head(features)  # [B, num_control_points + degree + 1]
+        # zeros = torch.zeros(batch_size, 4).to(self.device)
+        # deta_knots_14 = torch.cat([zeros, deta_knots_6, zeros], dim=1)
+        # knots = deta_knots_14 + knots.to(self.device)  # [B, num_control_points + degree + 1]
         knots = knots.to(dtype=torch.float32)
    
         # 特征提取
@@ -126,6 +126,11 @@ class KeypointBSplineNet(nn.Module):
             bs_torch.u = knot_i
             uq = torch.linspace(0,1,34).to(self.device)
             y_c_torch = bs_torch.bs(uq)
+            # [NaN 调试] 检查 y_c_torch 是否有NaN/Inf
+            if torch.isnan(y_c_torch).any() or torch.isinf(y_c_torch).any():
+                print(f"[CobbNet.py][{i}] Error: y_c_torch contains NaN or Inf!")
+                raise ValueError("y_c_torch contains NaN or Inf")
+
             cobb_angle_torch = cobb_angle_line_torch(y_c_torch)
             cobb_angles.append(cobb_angle_torch)
             
@@ -143,7 +148,7 @@ class KeypointBSplineNet(nn.Module):
   
 
         # cobb_angles = self.cobb_angle_head(features)  # [B, num_angles]
-        return cobb_angles,deta_cp,deta_knots_6
+        return cobb_angles,deta_cp
     
 
     

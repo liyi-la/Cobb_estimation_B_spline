@@ -21,14 +21,14 @@ config = {
     'path_image': r'D:\Project\Xiehe_Spinal_image_stitching\cobb\ke30_u7_AASCE2019-master\boostnet_labeldata',
     'batch_size': 16,
     'num_epochs': 100,
-    'learning_rate': 0.00005,
+    'learning_rate': 0.00001,
     'weight_decay': 1e-4,
     'num_keypoints': 34,
     'num_control_points': 10,
     'degree': 3,
     'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-    'save_dir': 'checkpoints_cobb4',
-    'log_dir': 'logs_cobb4'
+    'save_dir': 'checkpoints_cp',
+    'log_dir': 'logs_cp'
 }
 
 # 创建保存目录
@@ -41,7 +41,7 @@ train_dataset = CobbNetDataset(config['path_image'], config['path_heatmap'], tra
 train_loader = DataLoader(train_dataset, config['batch_size'], shuffle=True, num_workers=0)
 
 test_dataset = CobbNetDataset(config['path_image'], config['path_heatmap'], train=False)
-test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
+test_loader = DataLoader(test_dataset, config['batch_size'], shuffle=True, num_workers=0)
 
 print(f"训练集大小: {len(train_dataset)}")
 print(f"测试集大小: {len(test_dataset)}")
@@ -77,8 +77,6 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
     """训练一个epoch"""
     model.train()
     total_loss = 0.0
-    total_cp_loss = 0.0
-    total_knots_loss = 0.0
     num_batches = 0
     
     for batch_idx, (origin_shape, label,  image_name, p,
@@ -88,10 +86,25 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         # 数据移到设备
         kp_pred = kp_pred.to(device, dtype=torch.float32)
         cobb_angle_GT = cobb_angle_GT.to(device, dtype=torch.float32) 
+
+        # [NaN 调试] 检查输入是否有NaN/Inf
+        if torch.isnan(kp_pred).any() or torch.isinf(kp_pred).any():
+            print(f"[{epoch}/{batch_idx}] Error: kp_pred contains NaN or Inf!")
+            raise ValueError("kp_pred contains NaN or Inf")
+        if torch.isnan(cobb_angle_GT).any() or torch.isinf(cobb_angle_GT).any():
+            print(f"[{epoch}/{batch_idx}] Error: cobb_angle_GT contains NaN or Inf!")
+            raise ValueError("cobb_angle_GT contains NaN or Inf")
+        
         # 前向传播
-        # with torch.autograd.set_detect_anomaly(True):
         optimizer.zero_grad()
-        cobb_angles_pred, deta_cp, deta_knots = model(kp_pred,knots,cp)
+        
+        cobb_angles_pred, deta_cp = model(kp_pred,knots,cp)
+
+        # [NaN 调试] 检查预测值是否有NaN/Inf
+        if torch.isnan(cobb_angles_pred).any() or torch.isinf(cobb_angles_pred).any():
+            print(f"[{epoch}/{batch_idx}] Error: cobb_angles_pred contains NaN or Inf!")
+            raise ValueError("cobb_angles_pred contains NaN or Inf")
+
         loss_batch = mse_loss(cobb_angles_pred, cobb_angle_GT)
 
         # print("deta_keyp", deta_keyp)
@@ -100,7 +113,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         loss_batch.backward()
         
         # 梯度裁剪
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
         optimizer.step()
  
@@ -125,8 +138,6 @@ def validate_epoch(model, test_loader, criterion, device):
     """验证一个epoch"""
     model.eval()
     total_loss = 0.0
-    total_cp_loss = 0.0
-    total_knots_loss = 0.0
     num_batches = 0
     
     with torch.no_grad():
@@ -138,7 +149,7 @@ def validate_epoch(model, test_loader, criterion, device):
             cobb_angle_GT = cobb_angle_GT.to(device, dtype=torch.float32) 
             
             # 前向传播
-            cobb_angles_pred, deta_cp, deta_knots = model(kp_pred,knots,cp)
+            cobb_angles_pred, deta_cp = model(kp_pred,knots,cp)
             
             # 计算损失
             mse_loss = nn.MSELoss()
@@ -155,7 +166,7 @@ def validate_epoch(model, test_loader, criterion, device):
 
 def plot_training_history(history, save_path):
     """绘制训练历史"""
-    fig, axes = plt.subplots(1, 2, figsize=(10, 8))
+    fig, axes = plt.subplots(1, 2, figsize=(8, 8))
     
     # 总损失
     axes[0].plot(history['epoch'], history['train_loss'], 'b-', label='Train Loss')

@@ -275,17 +275,24 @@ def calculate_slopes_torch(y_c: torch.Tensor) -> torch.Tensor:
     """
     if len(y_c.shape) != 2 or y_c.shape[1] != 2:
         raise ValueError("y_c should have shape [N, 2]")
+
     
     # Calculate differences
     dx = y_c[1:, 1] - y_c[:-1, 1]  # x differences
     dy = y_c[1:, 0] - y_c[:-1, 0]  # y differences
     
     # Handle zero dx cases to avoid division by zero
-    dx_safe = torch.where(torch.abs(dx) < 1e-10, 
-                         torch.sign(dx) * 1e-10, 
+    dx_safe = torch.where(torch.abs(dx) < 1e-6,  # 增加阈值，减少除零风险
+                         torch.sign(dx) * 1e-6 + 1e-10,  # 确保不为零
                          dx)
     
     slopes = dy / dx_safe
+
+    # [NaN 调试] 检查 slopes 是否有NaN/Inf
+    # if torch.isnan(slopes).any() or torch.isinf(slopes).any():
+    #     print(f"[calculate_slopes_torch] Error: slopes contains NaN or Inf!")
+    #     raise ValueError("slopes contains NaN or Inf")
+
     return slopes
 
 def cobb_angle_line_torch(y_c: torch.Tensor, 
@@ -313,12 +320,22 @@ def cobb_angle_line_torch(y_c: torch.Tensor,
     # Calculate slopes
     slopes = calculate_slopes_torch(y_c)
     
+    # [NaN 调试] 检查 slopes 是否有NaN/Inf
+    if torch.isnan(slopes).any() or torch.isinf(slopes).any():
+        print(f"[cobb_angle_line_torch] Error: slopes contains NaN or Inf!")
+        raise ValueError("slopes contains NaN or Inf")
+
     # Calculate average slopes (perpendicular slopes: -1/s)
     # Handle division by zero for slopes
-    slopes_safe = torch.where(torch.abs(slopes) < 1e-10,
-                             torch.sign(slopes) * 1e-10,
+    slopes_safe = torch.where(torch.abs(slopes) < 1e-6,  # 增加阈值，减少除零风险
+                             torch.sign(slopes) * 1e-6 + 1e-10,  # 确保不为零
                              slopes)
     avg_slopes = -1.0 / slopes_safe
+
+    # [NaN 调试] 检查 avg_slopes 是否有NaN/Inf
+    if torch.isnan(avg_slopes).any() or torch.isinf(avg_slopes).any():
+        print(f"[cobb_angle_line_torch] Error: avg_slopes contains NaN or Inf!")
+        raise ValueError("avg_slopes contains NaN or Inf")
     
     # Find max and min slopes
     max_slope = torch.max(avg_slopes)

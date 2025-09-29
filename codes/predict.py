@@ -71,7 +71,7 @@ class CobbNetPredictor:
             # 模型预测
             knots = knots.unsqueeze(0)
             cp = cp.unsqueeze(0)
-            cobb_angles_pred,deta_cp,deta_knots = self.model(keypoints, knots, cp)
+            cobb_angles_pred,deta_cp= self.model(keypoints, knots, cp)
             
             # 计算Cobb角
             # cobb_angles = self._compute_cobb_angles(pred_cp, pred_knots)
@@ -79,7 +79,6 @@ class CobbNetPredictor:
             result = {
                 # 'control_points': pred_cp.squeeze(0).cpu().numpy(),
                 'deta_cp': deta_cp.squeeze(0),  # 保持为PyTorch张量
-                'deta_knots': deta_knots.squeeze(0),  # 保持为PyTorch张量
                 'cobb_angles': cobb_angles_pred.squeeze(0).cpu().numpy()
             }
             
@@ -324,7 +323,7 @@ def visualize_result(img_name, p, y_c_pred, y_c_fixed):
 def main():
     """主函数示例"""
     # 配置
-    model_path = 'checkpoints_cobb4/best_model.pth'  # 模型路径
+    model_path = 'checkpoints_cp/best_model.pth'  # 模型路径
     
     # 数据集路径
     path_heatmap = r'D:\Project\Xiehe_Spinal_image_stitching\cobb\Heatmap'
@@ -350,7 +349,7 @@ def main():
         cp_tensor = torch.tensor(cp, dtype=torch.float32, device=predictor.device)
         result= predictor.predict_single(kp_pred_tensor, knots_tensor, cp_tensor)
         deta_cp = result['deta_cp']
-        deta_knots = result['deta_knots']
+        
         kp_pred_tensor = kp_pred_tensor.reshape(-1)
         # kp_fixed = kp_pred_tensor + deta_cp
         # kp_fixed_np = kp_fixed.cpu().numpy().reshape(34,2)
@@ -368,14 +367,10 @@ def main():
        
         ### 修正后的关键点计算B样条曲线可视化
         bs_fixed=BS_curve(9,3)
-        # paras = bs_fixed.estimate_parameters(kp_fixed_np) # B样条参数
-        zeros = torch.zeros(4).to(predictor.device)
-        deta_knots_14 = torch.cat([zeros, deta_knots, zeros], dim=0)
-        knots = deta_knots_14 + knots_tensor# 节点
+
         cp = deta_cp + cp_tensor
         paras = bs_fixed.estimate_parameters(kp_pred)
         cp = cp.cpu().numpy()
-        knots = knots.cpu().numpy()
         bs_fixed.cp = cp
         bs_fixed.u = knots
 
