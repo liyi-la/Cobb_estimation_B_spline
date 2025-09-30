@@ -324,7 +324,7 @@ def visualize_result(img_name, p, y_c_pred, y_c_fixed):
 def main():
     """主函数示例"""
     # 配置
-    model_path = 'checkpoints_cobb4/best_model.pth'  # 模型路径
+    model_path = 'checkpoints_cp_knots/best_model.pth'  # 模型路径
     
     # 数据集路径
     path_heatmap = r'D:\Project\Xiehe_Spinal_image_stitching\cobb\Heatmap'
@@ -385,7 +385,7 @@ def main():
         uq = np.linspace(0,1,34)
         y_c_fixed = np.array(bs_fixed.bs(uq)) # 计算B样条曲线
       
-        # visualize_result(image_name, p, y_c_pred, y_c_fixed)
+        visualize_result(image_name, p, y_c_pred, y_c_fixed)
         
         
         print(image_name)
@@ -413,8 +413,8 @@ def main():
             smape_fixed.append((abs(gt - pred2), gt + pred2))
         
         
-        # if batch_idx >= 5:  # 只处理前5个样本
-        #     break
+        if batch_idx >= 5:  # 只处理前5个样本
+            break
         
     # 计算 MAE
     def compute_mae(mae_dict):

@@ -21,14 +21,14 @@ config = {
     'path_image': r'D:\Project\Xiehe_Spinal_image_stitching\cobb\ke30_u7_AASCE2019-master\boostnet_labeldata',
     'batch_size': 16,
     'num_epochs': 100,
-    'learning_rate': 0.00005,
+    'learning_rate': 0.00001,
     'weight_decay': 1e-4,
     'num_keypoints': 34,
     'num_control_points': 10,
     'degree': 3,
     'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-    'save_dir': 'checkpoints_cobb4',
-    'log_dir': 'logs_cobb4'
+    'save_dir': 'checkpoints_cp_knots',
+    'log_dir': 'logs_cp_knots'
 }
 
 # 创建保存目录
@@ -41,7 +41,7 @@ train_dataset = CobbNetDataset(config['path_image'], config['path_heatmap'], tra
 train_loader = DataLoader(train_dataset, config['batch_size'], shuffle=True, num_workers=0)
 
 test_dataset = CobbNetDataset(config['path_image'], config['path_heatmap'], train=False)
-test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
+test_loader = DataLoader(test_dataset, config['batch_size'], shuffle=False, num_workers=0)
 
 print(f"训练集大小: {len(train_dataset)}")
 print(f"测试集大小: {len(test_dataset)}")
@@ -77,8 +77,6 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
     """训练一个epoch"""
     model.train()
     total_loss = 0.0
-    total_cp_loss = 0.0
-    total_knots_loss = 0.0
     num_batches = 0
     
     for batch_idx, (origin_shape, label,  image_name, p,
@@ -100,7 +98,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         loss_batch.backward()
         
         # 梯度裁剪
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         
         optimizer.step()
  
@@ -125,8 +123,6 @@ def validate_epoch(model, test_loader, criterion, device):
     """验证一个epoch"""
     model.eval()
     total_loss = 0.0
-    total_cp_loss = 0.0
-    total_knots_loss = 0.0
     num_batches = 0
     
     with torch.no_grad():
@@ -165,24 +161,7 @@ def plot_training_history(history, save_path):
     axes[0].set_ylabel('Loss')
     axes[0].legend()
     axes[0].grid(True)
-    
-    # # 控制点损失
-    # axes[1].plot(history['epoch'], history['train_cp_loss'], 'b-', label='Train CP Loss')
-    # axes[1].plot(history['epoch'], history['val_cp_loss'], 'r-', label='Val CP Loss')
-    # axes[1].set_title('Control Points Loss')
-    # axes[1].set_xlabel('Epoch')
-    # axes[1].set_ylabel('Loss')
-    # axes[1].legend()
-    # axes[1].grid(True)
-    
-    # # 节点损失
-    # axes[2].plot(history['epoch'], history['train_knots_loss'], 'b-', label='Train Knots Loss')
-    # axes[2].plot(history['epoch'], history['val_knots_loss'], 'r-', label='Val Knots Loss')
-    # axes[2].set_title('Knots Loss')
-    # axes[2].set_xlabel('Epoch')
-    # axes[2].set_ylabel('Loss')
-    # axes[2].legend()
-    # axes[2].grid(True)
+
     
     # 学习率
     axes[1].plot(history['epoch'], history['lr'], 'g-', label='Learning Rate')
@@ -258,10 +237,6 @@ for epoch in range(config['num_epochs']):
                        os.path.join(config['save_dir'], 'best_model.pth'))
         print(f'新的最佳模型已保存，验证损失: {val_loss:.6f}')
     
-    # # 定期保存检查点
-    # if (epoch + 1) % 10 == 0:
-    #     save_checkpoint(model, optimizer, epoch, val_loss,
-    #                    os.path.join(config['save_dir'], f'checkpoint_epoch_{epoch}.pth'))
     
     # 定期绘制训练历史
     if (epoch + 1) % 5 == 0:
