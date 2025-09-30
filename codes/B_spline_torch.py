@@ -355,12 +355,10 @@ class BS_curve_torch(object):
                 cpm.append(cpm_dim)
             
             cpm = torch.stack(cpm, dim=1)
-            # 修复：避免就地操作，创建新的张量
             P_new = P.clone()  # 创建副本
             P_new[1:self.n] = cpm
             P = P_new
-        
-        # 修复：避免就地操作，返回新的张量
+
         self.cp = P.clone()
         return P.clone()
 

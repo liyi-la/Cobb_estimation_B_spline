@@ -27,8 +27,8 @@ config = {
     'num_control_points': 10,
     'degree': 3,
     'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-    'save_dir': 'checkpoints_cp_knots',
-    'log_dir': 'logs_cp_knots'
+    'save_dir': 'checkpoints_knots',
+    'log_dir': 'logs_knots'
 }
 
 # 创建保存目录
@@ -89,7 +89,7 @@ def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
         # 前向传播
         # with torch.autograd.set_detect_anomaly(True):
         optimizer.zero_grad()
-        cobb_angles_pred, deta_cp, deta_knots = model(kp_pred,knots,cp)
+        cobb_angles_pred, deta_knots = model(kp_pred,knots,cp)
         loss_batch = mse_loss(cobb_angles_pred, cobb_angle_GT)
 
         # print("deta_keyp", deta_keyp)
@@ -134,7 +134,7 @@ def validate_epoch(model, test_loader, criterion, device):
             cobb_angle_GT = cobb_angle_GT.to(device, dtype=torch.float32) 
             
             # 前向传播
-            cobb_angles_pred, deta_cp, deta_knots = model(kp_pred,knots,cp)
+            cobb_angles_pred,  deta_knots = model(kp_pred,knots,cp)
             
             # 计算损失
             mse_loss = nn.MSELoss()

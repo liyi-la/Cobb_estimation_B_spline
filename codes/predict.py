@@ -71,14 +71,14 @@ class CobbNetPredictor:
             # 模型预测
             knots = knots.unsqueeze(0)
             cp = cp.unsqueeze(0)
-            cobb_angles_pred,deta_cp,deta_knots = self.model(keypoints, knots, cp)
+            cobb_angles_pred,deta_knots = self.model(keypoints, knots)
             
             # 计算Cobb角
             # cobb_angles = self._compute_cobb_angles(pred_cp, pred_knots)
             
             result = {
                 # 'control_points': pred_cp.squeeze(0).cpu().numpy(),
-                'deta_cp': deta_cp.squeeze(0),  # 保持为PyTorch张量
+                # 'deta_cp': deta_cp.squeeze(0),  # 保持为PyTorch张量
                 'deta_knots': deta_knots.squeeze(0),  # 保持为PyTorch张量
                 'cobb_angles': cobb_angles_pred.squeeze(0).cpu().numpy()
             }
@@ -348,8 +348,7 @@ def main():
         kp_pred_tensor = torch.tensor(kp_pred, dtype=torch.float32, device=predictor.device)
         knots_tensor = torch.tensor(knots, dtype=torch.float32, device=predictor.device)
         cp_tensor = torch.tensor(cp, dtype=torch.float32, device=predictor.device)
-        result= predictor.predict_single(kp_pred_tensor, knots_tensor, cp_tensor)
-        deta_cp = result['deta_cp']
+        result= predictor.predict_single(kp_pred_tensor, knots_tensor)
         deta_knots = result['deta_knots']
         kp_pred_tensor = kp_pred_tensor.reshape(-1)
         # kp_fixed = kp_pred_tensor + deta_cp
@@ -372,12 +371,10 @@ def main():
         zeros = torch.zeros(4).to(predictor.device)
         deta_knots_14 = torch.cat([zeros, deta_knots, zeros], dim=0)
         knots = deta_knots_14 + knots_tensor# 节点
-        cp = deta_cp + cp_tensor
         paras = bs_fixed.estimate_parameters(kp_pred)
-        cp = cp.cpu().numpy()
         knots = knots.cpu().numpy()
-        bs_fixed.cp = cp
         bs_fixed.u = knots
+        bs_fixed.cp = cp
 
         # print(f"  修正后的节点：{knots}")
         # print(f"  修正后的控制点：{cp}")
@@ -385,13 +382,12 @@ def main():
         uq = np.linspace(0,1,34)
         y_c_fixed = np.array(bs_fixed.bs(uq)) # 计算B样条曲线
       
-        visualize_result(image_name, p, y_c_pred, y_c_fixed)
+        # visualize_result(image_name, p, y_c_pred, y_c_fixed)
         
         
         print(image_name)
         print(f"预测结果:")
         # print(f"  曲线：{y_c_torch}")
-        print(f"  关键点坐标：{result['deta_cp'].shape}")
         print(f"  基于预测的中心点计算角度：{cobb_angle}")
         print(f"  修正后的Cobb角: {result['cobb_angles']}")
         print(f"  Cobb角GT: {cobb_angle_GT}")
@@ -413,8 +409,8 @@ def main():
             smape_fixed.append((abs(gt - pred2), gt + pred2))
         
         
-        if batch_idx >= 5:  # 只处理前5个样本
-            break
+        # if batch_idx >= 5:  # 只处理前5个样本
+        #     break
         
     # 计算 MAE
     def compute_mae(mae_dict):

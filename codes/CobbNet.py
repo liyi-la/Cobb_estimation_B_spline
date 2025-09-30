@@ -98,13 +98,6 @@ class KeypointBSplineNet(nn.Module):
             keypoints = keypoints.view(batch_size, -1)  # [B, num_keypoints*2]
         
         features = self.feature_extractor(keypoints)  # [B, 256]
-        # deta_keyp = self.deta_kp(features) # [B, num_keypoints * 2]
-        # kps = deta_keyp + keypoints  
-       # 预测控制点
-        cp_flat = self.cp_head(features)  # [B, num_control_points*2]
-        deta_cp = cp_flat.view(batch_size, self.num_control_points, 2)  # [B, num_control_points, 2]
-        cps = deta_cp + cp.to(self.device)  # [B, num_control_points, 2]
-        cps = cps.to(dtype=torch.float32)
         # 预测节点
         deta_knots_6 = self.knots_head(features)  # [B, num_control_points + degree + 1]
         zeros = torch.zeros(batch_size, 4).to(self.device)
@@ -118,11 +111,15 @@ class KeypointBSplineNet(nn.Module):
         bs_torch = BS_curve_torch(9,3,self.device)
         cobb_angles = []
         for i in range(batch_size):
-            kp = keypoints[i].view(self.num_keypoints, 2)  # [num_keypoints, 2]
+            kp = keypoints[i].view(self.num_keypoints, 2).to(self.device)  # [num_keypoints, 2]
             paras = bs_torch.estimate_parameters(kp)  # 
-            cp_i = cps[i].view(self.num_control_points, 2)  # [num_control_points, 2]
+            # cp_i = cp[i].view(self.num_control_points, 2)  # [num_control_points, 2]
+            
             knot_i = knots[i]  # [num_control_points + degree + 1]
-            bs_torch.cp = cp_i
+            # bs_torch.cp = cp_i.to(dtype=torch.float32, device=self.device)
+            
+            cp = cp.to(dtype=torch.float32, device=self.device)
+            bs_torch.cp = cp[i]
             bs_torch.u = knot_i
             uq = torch.linspace(0,1,34).to(self.device)
             y_c_torch = bs_torch.bs(uq)
@@ -143,7 +140,7 @@ class KeypointBSplineNet(nn.Module):
   
 
         # cobb_angles = self.cobb_angle_head(features)  # [B, num_angles]
-        return cobb_angles,deta_cp,deta_knots_6
+        return cobb_angles,deta_knots_6
     
 
     
